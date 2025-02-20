@@ -73,6 +73,12 @@ def local_css():
         </style>
     """, unsafe_allow_html=True)
 
+def display_math_section(title, latex_expression):
+    st.markdown(f"### {title}")
+    st.markdown('<div class="latex-container">', unsafe_allow_html=True)
+    st.latex(latex_expression)
+    st.markdown('</div>', unsafe_allow_html=True)
+
 # ECDF calculation functions
 def calculate_ecdf(x, y):
     n = sum(y)
@@ -81,16 +87,21 @@ def calculate_ecdf(x, y):
 
 def ecdf_math_function(x, y):
     cum_probs = calculate_ecdf(x, y)
-    ecdf_str = r"\[ F(x) = \begin{cases} "
+    # Start with raw string to handle backslashes properly
+    ecdf_str = r"""
+    F(x) = \begin{cases}
+    """
     
     for i in range(len(x)):
         if i == 0:
-            ecdf_str += r"0 & \text{for } x < " + f"{x[i]:.2f}" + r" \\ "
+            ecdf_str += f"0 & \\text{{for }} x < {x[i]:.2f} \\\\"
         else:
-            ecdf_str += f"{cum_probs[i-1]:.3f}" + r" & \text{for } " + f"{x[i-1]:.2f} \leq x < {x[i]:.2f}" + r" \\ "
+            ecdf_str += f"{cum_probs[i-1]:.3f} & \\text{{for }} {x[i-1]:.2f} \\leq x < {x[i]:.2f} \\\\"
     
-    ecdf_str += f"1 & \\text{{for }} x \geq {x[-1]:.2f}" + r" \\ "
-    ecdf_str += r"\end{cases} \]"
+    ecdf_str += f"1 & \\text{{for }} x \\geq {x[-1]:.2f}"
+    ecdf_str += r"""
+    \end{cases}
+    """
     return ecdf_str
 
 def plot_ecdf(x, y):
@@ -135,16 +146,21 @@ def calculate_ogive(groups, frequencies):
 
 def ogive_math_function(groups, frequencies):
     cum_freq = calculate_ogive(groups, frequencies)
-    ogive_str = r"\[ G(x) = \begin{cases} "
+    # Start with raw string to handle backslashes properly
+    ogive_str = r"""
+    G(x) = \begin{cases}
+    """
     
     for i in range(len(groups) - 1):
         if i == 0:
-            ogive_str += r"0 & \text{for } x < " + f"{groups[i]:.2f}" + r" \\ "
+            ogive_str += f"0 & \\text{{for }} x < {groups[i]:.2f} \\\\"
         else:
-            ogive_str += f"{cum_freq[i-1]:.3f}" + r" & \text{for } " + f"{groups[i-1]:.2f} \leq x < {groups[i]:.2f}" + r" \\ "
+            ogive_str += f"{cum_freq[i-1]:.3f} & \\text{{for }} {groups[i-1]:.2f} \\leq x < {groups[i]:.2f} \\\\"
     
-    ogive_str += f"1 & \\text{{for }} x \geq {groups[-1]:.2f}" + r" \\ "
-    ogive_str += r"\end{cases} \]"
+    ogive_str += f"1 & \\text{{for }} x \\geq {groups[-1]:.2f}"
+    ogive_str += r"""
+    \end{cases}
+    """
     return ogive_str
 
 def plot_ogive(groups, frequencies):
@@ -262,10 +278,7 @@ def main():
             }))
             
             # Display ECDF math function
-            st.markdown("### ECDF Function")
-            st.markdown('<div class="latex-container">', unsafe_allow_html=True)
-            st.latex(ecdf_math_function(x, y))
-            st.markdown('</div>', unsafe_allow_html=True)
+            display_math_section("ECDF Function", ecdf_math_function(x, y))
             
             # Plot ECDF
             st.plotly_chart(plot_ecdf(x, y), use_container_width=True)
@@ -342,10 +355,7 @@ def main():
             }))
             
             # Display Ogive math function
-            st.markdown("### Ogive Function")
-            st.markdown('<div class="latex-container">', unsafe_allow_html=True)
-            st.latex(ogive_math_function(groups, frequencies))
-            st.markdown('</div>', unsafe_allow_html=True)
+            display_math_section("Ogive Function", ogive_math_function(groups, frequencies))
             
             # Plot Ogive
             st.plotly_chart(plot_ogive(groups, frequencies), use_container_width=True)
