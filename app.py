@@ -3,132 +3,160 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-# Page config
-st.set_page_config(page_title="ECDF and Ogive Analysis", layout="wide")
+# Configure the page
+st.set_page_config(
+    page_title="ECDF and Ogive Analysis",
+    layout="wide"
+)
 
-# Title
-st.title("ECDF and Ogive Analysis")
+def calculate_ecdf(x, y):
+    """Calculate ECDF values for points"""
+    x = np.array(x)
+    y = np.array(y)
+    # Sort points
+    sort_idx = np.argsort(x)
+    x = x[sort_idx]
+    y = y[sort_idx]
+    
+    # Calculate cumulative probabilities
+    cum_y = np.cumsum(y)
+    n = sum(y)
+    cum_probs = cum_y / n
+    
+    return x, cum_probs
 
-# Create tabs
-tab1, tab2, tab3, tab4 = st.tabs(["ECDF Analysis", "Ogive Analysis", "Help", "About"])
+def plot_ecdf(x, y):
+    """Plot ECDF as a proper step function"""
+    x_sorted, cum_probs = calculate_ecdf(x, y)
+    
+    # Create steps for plotting
+    x_steps = np.repeat(x_sorted, 2)[1:]
+    x_steps = np.insert(x_steps, 0, x_sorted[0])
+    x_steps = np.append(x_steps, x_sorted[-1])
+    
+    y_steps = np.repeat(cum_probs, 2)[:-1]
+    y_steps = np.insert(y_steps, 0, 0)  # Start at 0
+    
+    fig = go.Figure()
+    
+    # Add main ECDF step function
+    fig.add_trace(go.Scatter(
+        x=x_steps,
+        y=y_steps,
+        mode='lines',
+        name='ECDF',
+        line=dict(color='#2C3E50', width=2)
+    ))
+    
+    # Add points at the jumps
+    fig.add_trace(go.Scatter(
+        x=x_sorted,
+        y=cum_probs,
+        mode='markers',
+        name='Jump points',
+        marker=dict(color='#2C3E50', size=8)
+    ))
+    
+    fig.update_layout(
+        title={
+            'text': 'Empirical Cumulative Distribution Function (ECDF)',
+            'y': 0.95,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'
+        },
+        xaxis_title='x',
+        yaxis_title='F_n(x)',
+        yaxis_range=[-0.05, 1.05],
+        showlegend=False,
+        template='plotly_white',
+        hovermode='x'
+    )
+    
+    return fig
 
-with tab1:
-    st.header("ECDF Analysis")
-    st.write("Enter your data for ECDF analysis")
-    
-    # Input for number of points
-    n = st.number_input("Number of points", min_value=1, value=3)
-    
-    # Create two columns
-    col1, col2 = st.columns(2)
-    
-    # Input for x values
-    with col1:
-        st.subheader("X Values")
-        x_values = []
-        for i in range(n):
-            x = st.number_input(f"X{i+1}", value=float(i), key=f"x_{i}")
-            x_values.append(x)
-    
-    # Input for frequencies
-    with col2:
-        st.subheader("Frequencies")
-        freq_values = []
-        for i in range(n):
-            f = st.number_input(f"Freq{i+1}", value=1, min_value=1, key=f"f_{i}")
-            freq_values.append(f)
-    
-    if st.button("Calculate ECDF"):
-        x = np.array(x_values)
-        y = np.array(freq_values)
-        cum_freq = np.cumsum(y)/sum(y)
-        
-        # Display results
-        df = pd.DataFrame({
-            'X': x,
-            'Frequency': y,
-            'Cumulative Frequency': cum_freq
-        })
-        st.write("Results:")
-        st.dataframe(df)
-        
-        # Plot ECDF
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=x, y=cum_freq, mode='lines+markers'))
-        fig.update_layout(title="ECDF Plot",
-                         xaxis_title="X",
-                         yaxis_title="Cumulative Frequency")
-        st.plotly_chart(fig)
+def calculate_ogive(groups, frequencies):
+    """Calculate Ogive values for grouped data"""
+    cum_freq = np.cumsum(frequencies) / sum(frequencies)
+    return np.append([0], cum_freq)  # Add 0 for the first boundary
 
-with tab2:
-    st.header("Ogive Analysis")
-    st.write("Enter your data for Ogive analysis")
+def plot_ogive(groups, frequencies):
+    """Plot Ogive as a continuous curve for grouped data"""
+    cum_freq = calculate_ogive(groups, frequencies)
     
-    # Input for number of groups
-    m = st.number_input("Number of group boundaries", min_value=2, value=4)
+    fig = go.Figure()
     
-    # Create two columns
-    col1, col2 = st.columns(2)
+    # Add connecting lines
+    fig.add_trace(go.Scatter(
+        x=groups,
+        y=cum_freq,
+        mode='lines+markers',
+        name='Ogive',
+        line=dict(color='#2C3E50', width=2),
+        marker=dict(size=8, color='#2C3E50')
+    ))
     
-    # Input for boundaries
-    with col1:
-        st.subheader("Group Boundaries")
-        boundaries = []
-        for i in range(m):
-            b = st.number_input(f"Boundary {i+1}", value=float(i), key=f"b_{i}")
-            boundaries.append(b)
+    fig.update_layout(
+        title={
+            'text': 'Ogive (Cumulative Frequency Polygon)',
+            'y': 0.95,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'
+        },
+        xaxis_title='Group Boundaries',
+        yaxis_title='Cumulative Proportion',
+        yaxis_range=[-0.05, 1.05],
+        template='plotly_white',
+        hovermode='x'
+    )
     
-    # Input for frequencies
-    with col2:
-        st.subheader("Frequencies")
-        ogive_freqs = []
-        for i in range(m-1):
-            f = st.number_input(f"Frequency {i+1}", value=1, min_value=1, key=f"of_{i}")
-            ogive_freqs.append(f)
-    
-    if st.button("Calculate Ogive"):
-        boundaries = np.array(boundaries)
-        freqs = np.array(ogive_freqs)
-        cum_freq = np.cumsum(freqs)/sum(freqs)
-        
-        # Display results
-        df = pd.DataFrame({
-            'Lower Bound': boundaries[:-1],
-            'Upper Bound': boundaries[1:],
-            'Frequency': freqs,
-            'Cumulative Proportion': cum_freq
-        })
-        st.write("Results:")
-        st.dataframe(df)
-        
-        # Plot Ogive
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=boundaries[1:], y=cum_freq, mode='lines+markers'))
-        fig.update_layout(title="Ogive Plot",
-                         xaxis_title="Group Boundary",
-                         yaxis_title="Cumulative Proportion")
-        st.plotly_chart(fig)
+    return fig
 
-with tab3:
-    st.header("Help")
-    st.write("""
-    ### ECDF (Empirical Cumulative Distribution Function)
+def ecdf_math_function(x, y):
+    """Generate LaTeX for ECDF function"""
+    x_sorted, cum_probs = calculate_ecdf(x, y)
+    ecdf_str = r"""
+    F_n(x) = \begin{cases}
+    """
     
-    The ECDF shows the proportion of observations less than or equal to each value.
+    # First case for x < min
+    ecdf_str += r"0, & x < " + f"{x_sorted[0]:.2f} \\\\"
     
-    ### Ogive
+    # Middle cases
+    for i in range(len(x_sorted)-1):
+        ecdf_str += f"{cum_probs[i]:.3f}, & {x_sorted[i]:.2f} \leq x < {x_sorted[i+1]:.2f} \\\\"
     
-    The Ogive is a graphical display of cumulative frequencies for grouped data.
-    """)
+    # Last case for x ≥ max
+    ecdf_str += f"1, & x \geq {x_sorted[-1]:.2f}"
+    
+    ecdf_str += r"""
+    \end{cases}
+    """
+    return ecdf_str
 
-with tab4:
-    st.header("About")
-    st.write("""
-    ### Developer Information
+def ogive_math_function(groups, frequencies):
+    """Generate LaTeX for Ogive function"""
+    cum_freq = calculate_ogive(groups, frequencies)[1:]  # Skip the initial 0
+    ogive_str = r"""
+    F_n(x) = \begin{cases}
+    """
     
-    **Prof. Dhafer Malouche**  
-    Professor of Statistics  
-    Qatar University
+    # First case
+    ogive_str += f"\\frac{{x}}{{{groups[0]}}} \\cdot {cum_freq[0]:.3f}, & 0 \leq x < {groups[0]} \\\\"
     
-    Email: dhafer.malouche@qu.edu.qa
-    """)
+    # Middle cases
+    for i in range(len(groups)-2):
+        slope = (cum_freq[i+1] - cum_freq[i]) / (groups[i+1] - groups[i])
+        intercept = cum_freq[i] - slope * groups[i]
+        ogive_str += f"{slope:.6f}x + {intercept:.3f}, & {groups[i]} \leq x < {groups[i+1]} \\\\"
+    
+    # Last case
+    ogive_str += f"1, & x \geq {groups[-1]}"
+    
+    ogive_str += r"""
+    \end{cases}
+    """
+    return ogive_str
+
+[Rest of the app code with UI elements...]
